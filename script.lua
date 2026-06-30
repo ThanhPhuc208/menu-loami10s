@@ -1,18 +1,18 @@
 -- (Creator = Thanh Phuc)
--- 💟 Thanh Phuc - Harman Kardon Mi 10S Boombox (Dáng Lớn + 2 Màng Loa Tròn Co Giãn Cầu Vồng) 💟
+-- 💟 Thanh Phuc - Loa Kép Mi 10S Dáng Khối To Đứng Thẳng + Màng Loa Ẩn Đập Bass Uy Lực 💟
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local RunService = game:GetService("RunService")
 
--- Bộ phát âm thanh chuẩn chỉnh âm lượng vừa tai
+-- Bộ phát âm thanh chuẩn
 local LocalSound = Instance.new("Sound")
 LocalSound.Name = "ThanhPhucLocalSound"
 LocalSound.Parent = LocalPlayer:WaitForChild("PlayerWorkspace", 5) or workspace
-LocalSound.Volume = 2.5 
+LocalSound.Volume = 3.0 -- Tăng nhẹ Volume để kích bass tốt hơn
 LocalSound.Looped = true
 
--- QUẢN LÝ BOOMBOX VÀ 2 MÀNG LOA TRÒN
+-- QUẢN LÝ LOA ĐỨNG VÀ MÀNG LOA TRÒN ẨN
 local FakeBoombox = nil
 local SpeakerRings = {}
 local loopConnection = nil 
@@ -30,7 +30,7 @@ local function CreateFakeBoombox()
     local torso = character:WaitForChild("UpperTorso", 5) or character:WaitForChild("Torso", 5)
     if not torso then return end
     
-    -- [THAY ĐỔI THEO ẢNH 1000056597.jpg]: Tạo khối vuông lớn hơn, dày dặn và chắc chắn
+    -- [THAY ĐỔI THEO ẢNH 1000056629.jpg]: Tạo khối loa to, cao và dày dặn
     local part = Instance.new("Part")
     part.Name = "ThanhPhucChromaBoombox"
     part.Material = Enum.Material.Neon
@@ -39,19 +39,19 @@ local function CreateFakeBoombox()
     part.Parent = character
     FakeBoombox = part
     
-    -- Kích thước to hơn, vuông vắn mô phỏng khối xanh trong ảnh của bạn
-    local baseSize = Vector3.new(2.0, 1.8, 0.8) 
+    -- Kích thước to, cao chuẩn dáng khối đứng trong ảnh mới của bạn
+    local baseSize = Vector3.new(2.0, 2.2, 0.9) 
     part.Size = baseSize
     
-    -- Gắn cân đối sau lưng nhân vật (Hơi xéo nhẹ balo quai chéo thẩm mỹ)
+    -- [FIX THẲNG ĐỨNG]: Đeo loa ngay ngắn, thẳng hoàn toàn, không xoay chéo nữa!
     local weld = Instance.new("Weld")
     weld.Part0 = torso
     weld.Part1 = part
-    weld.C0 = CFrame.new(0, 0, 0.8) * CFrame.Angles(0, math.rad(180), math.rad(15))
+    -- Xoay đúng 180 độ để quay mặt loa ra sau, góc Z và X bằng 0 để loa đứng thẳng tắp
+    weld.C0 = CFrame.new(0, 0, 0.85) * CFrame.Angles(0, math.rad(180), 0)
     weld.Parent = part
     
-    -- TẠO LOA KÉP: 2 Màng loa hình tròn (Cylinder) nằm dính trên bề mặt thùng loa
-    -- Thiết kế màng loa không bao giờ biến mất, luôn xuất hiện cố định như loa thật
+    -- TẠO 2 MÀNG LOA KÉP TRÒN ẨN GỌN GÀNG BÊN TRONG THÂN LOA
     for i = 1, 2 do
         local ring = Instance.new("Part")
         ring.Name = "SpeakerRing" .. i
@@ -65,16 +65,18 @@ local function CreateFakeBoombox()
         ringWeld.Part0 = part
         ringWeld.Part1 = ring
         
-        -- Định vị 2 lỗ loa: loa trên và loa dưới (Chuẩn thiết kế loa kép đối xứng Mi 10S)
-        local yOffset = (i == 1) and 0.45 or -0.45
-        -- Xoay Cylinder nằm ngang bám lên mặt sau của khối vuông
-        ringWeld.C0 = CFrame.new(0, yOffset, 0.41) * CFrame.Angles(0, math.rad(90), 0)
+        -- Căn vị trí 2 màng loa đối xứng trên dưới
+        local yOffset = (i == 1) and 0.55 or -0.55
+        
+        -- [TỐI ƯU ẨN BÊN TRONG]: Đẩy vị trí Z vào sâu bên trong thân loa một chút (0.43 -> 0.40) 
+        -- giúp màng loa không bị lồi ra ngoài mà nằm ẩn tinh tế bên trong bề mặt
+        ringWeld.C0 = CFrame.new(0, yOffset, 0.40) * CFrame.Angles(0, math.rad(90), 0)
         ringWeld.Parent = ring
         
         table.insert(SpeakerRings, {Part = ring, Weld = ringWeld, Direction = i})
     end
     
-    -- HIỆU ỨNG CẦU VỒNG TOÀN DIỆN + ĐẬP BASS MƯỢT MÀ CHUẨN MI 10S
+    -- HIỆU ỨNG CẦU VỒNG + ĐẬP BASS RÕ RÀNG, MẠNH MẼ
     local hue = 0
     loopConnection = RunService.RenderStepped:Connect(function()
         if not part or not part.Parent or not part:IsDescendantOf(workspace) then
@@ -82,54 +84,51 @@ local function CreateFakeBoombox()
             return
         end
         
-        -- Lấy độ lớn âm thanh và chuẩn hóa mượt mà (Không bị giật lắc điên cuồng)
+        -- Thuật toán nhận bass nhạy và rõ ràng hơn
         local loudness = LocalSound.PlaybackLoudness
-        local normLoudness = math.clamp(loudness / 280, 0, 1) 
+        local normLoudness = math.clamp(loudness / 240, 0, 1) -- Hạ ngưỡng xuống 240 để lực đập nảy rõ ràng hơn
         
-        -- Chạy màu cầu vồng mượt mà
+        -- Chạy màu cầu vồng toàn diện
         hue = (hue + 1 + (normLoudness * 2)) % 360
         local mainColor = Color3.fromHSV(hue / 360, 1, 1)
         part.Color = mainColor
         
-        -- Thân loa lớn đập nhẹ nhàng theo nhịp bass (Co giãn tinh tế, không rung lắc dị hợm)
-        local bodyScale = 1 + (normLoudness * 0.12)
-        part.Size = Vector3.new(baseSize.X * bodyScale, baseSize.Y * bodyScale, baseSize.Z * bodyScale)
+        -- [ĐỘ ĐẬP RÕ RÀNG]: Thân loa to đập nảy mạnh mẽ, dứt khoát theo nhịp bass (Scale lên đến 0.22)
+        local bodyScale = 1 + (normLoudness * 0.22)
+        part.Size = Vector3.new(baseSize.X * bodyScale, baseSize.Y * (1 + normLoudness * 0.15), baseSize.Z * bodyScale)
         
-        -- Xử lý hiệu ứng 2 màng loa kép co giãn (Đập nhịp) cực nghệ thuật
+        -- Xử lý màng loa ẩn bên trong co giãn nhịp nhàng cùng thân loa
         for _, item in pairs(SpeakerRings) do
             if item.Part and item.Part.Parent then
-                -- Tạo nhịp nhấp nhô nhẹ liên tục để màng loa luôn sống động kể cả lúc nhạc nhỏ
-                local wave = math.sin(tick() * 18 + item.Direction * math.pi) * 0.04
+                -- Nhịp đập màng loa bên trong
+                local wave = math.sin(tick() * 20 + item.Direction * math.pi) * 0.05
+                local currentRadius = math.clamp(0.7 + (normLoudness * 0.35) + wave, 0.5, 1.2)
                 
-                -- Kích thước vòng tròn loa mở rộng ra khi Bass đánh (Giới hạn vừa vặn bề mặt)
-                local currentRadius = math.clamp(0.65 + (normLoudness * 0.3) + wave, 0.4, 1.1)
-                -- Độ dày màng loa nhô ra nhẹ tạo chiều sâu 3D
-                local ringThickness = 0.05 + (normLoudness * 0.05)
-                
-                -- Với Cylinder trong Roblox: Size.X là chiều dài trục, Size.Y và Z là đường kính vòng tròn
+                -- Độ dày cực mỏng để ép sát nằm chìm bên trong khối hộp
+                local ringThickness = 0.02
                 item.Part.Size = Vector3.new(ringThickness, currentRadius, currentRadius)
                 
-                -- Giữ màng loa luôn dính sát vào mặt thùng loa khi thùng loa phình to thu nhỏ
-                local currentZOffset = (part.Size.Z / 2) + (ringThickness / 2) - 0.01
-                local currentYOffset = ((item.Direction == 1) and 0.45 or -0.45) * bodyScale
+                -- Giữ màng loa ẩn luôn bám theo chuẩn vị trí khi khối loa đập to nhỏ
+                local currentZOffset = (part.Size.Z / 2) - 0.02 -- Nằm lùi vào trong bề mặt loa
+                local currentYOffset = ((item.Direction == 1) and 0.55 or -0.55) * bodyScale
                 item.Weld.C0 = CFrame.new(0, currentYOffset, currentZOffset) * CFrame.Angles(0, math.rad(90), 0)
                 
-                -- Màu màng loa lệch pha nhẹ với thân loa tạo điểm nhấn vòng tròn rõ nét
-                local ringHue = (hue + (item.Direction * 30)) % 360
-                item.Part.Color = Color3.fromHSV(ringHue / 360, 1, 0.9)
+                -- Màu màng loa lệch nhịp cầu vồng tạo hiệu ứng dải loa kép Mi 10S cực đẹp
+                local ringHue = (hue + (item.Direction * 25)) % 360
+                item.Part.Color = Color3.fromHSV(ringHue / 360, 1, 0.85)
             end
         end
     end)
 end
 
--- TỰ ĐỘNG ĐEO LẠI KHI NHÂN VẬT HỒI SINH
+-- TỰ ĐỘNG ĐEO LẠI KHI DIE
 LocalPlayer.CharacterAdded:Connect(function(char)
     char:WaitForChild("Humanoid")
     task.wait(0.5) 
     CreateFakeBoombox() 
 end)
 
--- GIAO DIỆN GUI (Giữ nguyên cấu trúc)
+-- GIAO DIỆN GUI (Giữ nguyên cấu trúc gốc của bạn)
 local ScreenGui = Instance.new("ScreenGui", PlayerGui)
 ScreenGui.ResetOnSpawn = false
 
@@ -191,10 +190,9 @@ PlayBtn.MouseButton1Click:Connect(function()
         LocalSound.SoundId = "rbxassetid://" .. cleanID
         LocalSound:Play()
         CreateFakeBoombox()
-        print("Thanh Phuc đã đổi bài thành công! Loa kép dạng tròn Mi 10S cực chất!")
+        print("Thanh Phuc đã kích hoạt loa đứng Mi 10S thành công, Bass đập cực chất!")
     else
         InputBox.Text = ""
         InputBox.PlaceholderText = "ID không hợp lệ!"
     end
 end)
-
